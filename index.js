@@ -4,13 +4,14 @@ let { promisify } = require('util')
 
 let SlackBot = require('slackbots')
 
+let config = require('./config')
 let Tamabotchi = require('./tamabotchi')
 
 let startBot = async function () {
     return new Promise(function (resolve, reject) {
         let bot = new SlackBot({
-            token: process.env.slack_token,
-            name: process.env.slack_name
+            token: config.slack_token,
+            name: config.slack_name
         })
 
         bot.on('start', function () {
