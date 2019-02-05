@@ -34,6 +34,10 @@ class Dictionary extends Object {
         }
         return array
     }
+
+    getLength(){
+        return Object.keys(this).length
+    }
 }
 
 Math.randomBetween = function () {
@@ -98,7 +102,7 @@ class MarkovChain {
             let nextWords = this.forward[key]
             for (let k of Object.keys(nextWords))
                 nextWordsLengths += nextWords[k]
-            nextWordsLengthsP += Object.keys(this.forward[key]).length
+            nextWordsLengthsP += this.forward[key].getLength()
         }
         let stats = {
             keysTotal: Object.keys(this.forward).length,
@@ -169,7 +173,7 @@ class Tamabotchi {
             return keyword.split(' ').indexOf(wordSelected) > -1
         }).map(function (nextWords) {
             // here i can also sum the values of nextWords
-            return nextWords.length
+            return nextWords.getLength()
         }).toPairs().sort(function (a, b) {
             // transform to pairs sorted by value
             return b[1] - a[1]

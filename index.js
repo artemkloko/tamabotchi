@@ -98,14 +98,7 @@ let main = async function () {
         tamabotchi = new Tamabotchi(3)
 
         let books = [
-            'books/history.txt',
-            // 'books/de-sade-bedroom.txt',
-            // 'books/Economic-Philosophic-Manuscripts-1844.txt',
-            // 'books/function_of_the_orgasm.txt',
-            // 'books/guy-debord-the-society-of-the-spectacle.txt',
-            // 'books/naked-lunch.txt',
-            // 'books/patience-and-sarah.txt',
-            // 'books/what-itd.txt'
+            'books/history.txt'
         ]
         for (let bookSrc of books) {
             let content = await promisify(readFile)(bookSrc, 'utf-8')
