@@ -9,8 +9,8 @@ let Tamabotchi = require('./tamabotchi')
 let startBot = async function () {
     return new Promise(function (resolve, reject) {
         let bot = new SlackBot({
-            token: 'xoxb-500173009233-539442653686-YgIBktujmhMS23XO70JhgrU8',
-            name: 'beemo'
+            token: process.env.slack_token,
+            name: process.env.slack_name
         })
 
         bot.on('start', function () {
@@ -97,7 +97,14 @@ let main = async function () {
         tamabotchi = new Tamabotchi(3)
 
         let books = [
-            'books/history.txt'
+            'books/history.txt',
+            // 'books/de-sade-bedroom.txt',
+            // 'books/Economic-Philosophic-Manuscripts-1844.txt',
+            // 'books/function_of_the_orgasm.txt',
+            // 'books/guy-debord-the-society-of-the-spectacle.txt',
+            // 'books/naked-lunch.txt',
+            // 'books/patience-and-sarah.txt',
+            // 'books/what-itd.txt'
         ]
         for (let bookSrc of books) {
             let content = await promisify(readFile)(bookSrc, 'utf-8')
