@@ -27,8 +27,8 @@ class XhrBook {
 
     async readNextSentence() {
         let nextStop = this.text.indexOf('.', this.hasReadUntil)
-        nextStop++
         let sentence = this.text.slice(this.hasReadUntil, nextStop)
+        nextStop++
         this.hasReadUntil = nextStop
         console.log(`read about ${Math.round(100 * this.hasReadUntil / this.text.length)}%`);
         return sentence

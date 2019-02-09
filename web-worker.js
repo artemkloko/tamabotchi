@@ -40,6 +40,12 @@ const main = async function () {
         }
 
         let books = []
+        try {
+            config = JSON.parse(await XhrBook.create('config.json'))
+            books = config.books
+        } catch (error) {
+
+        }
         for (bookSrc of books) {
             book = await XhrBook.create(bookSrc)
             while (true) {
@@ -50,7 +56,6 @@ const main = async function () {
                     break
                 }
             }
-
         }
 
         ready = true

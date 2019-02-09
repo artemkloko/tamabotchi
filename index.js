@@ -97,9 +97,7 @@ let main = async function () {
     try {
         tamabotchi = new Tamabotchi(3)
 
-        let books = [
-            'books/history.txt'
-        ]
+        let books = ['books/history.txt'].concat(config.books)
         for (let bookSrc of books) {
             let content = await promisify(readFile)(bookSrc, 'utf-8')
             for (let sentence of content.split(/[.�]/)) {
