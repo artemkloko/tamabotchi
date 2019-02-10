@@ -1,5 +1,5 @@
 {
-  "name": "tamagotchi",
+  "name": "tamabotchi",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "lodash": "^4.17.11",
     "slackbots": "^1.2.0"
   }
 }
