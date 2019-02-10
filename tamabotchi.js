@@ -193,7 +193,7 @@ class Tamabotchi {
         let f = this.markovChain.forward.get(keyword)
         let b = this.markovChain.backward.get(keyword.split(' ').reverse().join(' '))
         let reply = b.split(' ').reverse().join(' ') + f.substr(keyword.length)
-        reply = reply.replace(/ ([;,.?!])/g, '$1 ')
+        reply = reply.replace(/(\s+)([;,.?!])/g, ' $1 ')
         return reply
     }
 }
