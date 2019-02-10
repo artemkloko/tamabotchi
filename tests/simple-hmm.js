@@ -65,6 +65,10 @@ Array.prototype.observationProbabilities = function (observations) {
     return emissObserTransProba
 }
 
+Array.prototype.last = function () {
+    return this[this.length - 1]
+}
+
 // var emissions = 'SSRRRRRSSTTTTTTTSRTR'.split('')
 // var emissions = 'SSRRRRSRSRSTTTTTTTSRTR'.split('')
 // var emissions = 'RSSSRRRSSSRRSSSS'.split('')
@@ -87,7 +91,7 @@ var initialProbabilities = _.chain(rowKeys).map(rowKey => {
             return prob[0] === columnKey && prob[1] === rowKey
         })
         if (found.length > 0) {
-            cellValue = found[0][2]
+            cellValue = found[0].last()
             // xr + ys + zt = r <=> (x - 1)r + ys + zt = 0 and r + s + t = 1
             // xr + (y + 1)s + (z + 1)t = 1
             // so we add +1 to all probabilities except the current one
@@ -103,72 +107,43 @@ var initialProbabilities = _.chain(rowKeys).map(rowKey => {
 }).fromPairs().value()
 // console.log(initialProbabilities)
 
-// loop through columns
-for (var columnIndex = 0, columnsLength = columnKeys.length; columnIndex < columnsLength; columnIndex++) {
-    var columnKey = columnKeys[columnIndex]
-    // loop through row, starting from columnIndex
-    for (var rowIndex = columnIndex, rowsLength = rowKeys.length; rowIndex < rowsLength; rowIndex++) {
-        var rowKey = rowKeys[rowIndex]
-        // select the current equation
-        var row = initialProbabilities[rowKey]
-        cellValue = row[columnIndex]
+var elimination = function (iterator) { // iterator = 'forEach' || 'forEachRight'
+    // loop through columns
+    _(columnKeys)[iterator]((columnKey, columnIndex) => {
+        // loop through row, starting from columnIndex
+        _(rowKeys).drop(columnIndex - 1)[iterator]((rowKey, rowIndex) => {
+            // select the current equation
+            var row = initialProbabilities[rowKey]
+            var cellValue = row[columnIndex]
 
-        var firstValue = initialProbabilities[columnKey][columnIndex]
-        // our goal is
-        // cellValue + multiplier * firstValue = 0
-        var multiplier = -1 * cellValue / firstValue
+            var pivotRow = initialProbabilities[columnKey]
+            var pivotValue = pivotRow[columnIndex]
+            // our goal is
+            // cellValue + multiplier * pivotValue = 0
+            var multiplier = -1 * cellValue / pivotValue
 
-        if (rowIndex - columnIndex === 0) {
-            // divide all numbers of the row, so current becomes 1
-            row = row.map(v => v / cellValue)
-        } else {
-            row = row.map((v, k) => {
-                var rowKey = rowKeys[columnIndex]
-                var firstValue = initialProbabilities[rowKey][k]
-                var r = v + multiplier * firstValue
-                return r
-            })
-        }
-        initialProbabilities[rowKey] = row
-    }
-    // console.log(initialProbabilities)
-    // process.exit()
+            if (rowIndex - columnIndex === 0) {
+                // divide all numbers of the row, so current becomes 1
+                row = row.map(v => v / cellValue)
+            } else {
+                row = row.map((cellValue, cellIndex) => {
+                    var pivotValue = pivotRow[cellIndex]
+                    return cellValue + multiplier * pivotValue
+                })
+            }
+            initialProbabilities[rowKey] = row
+        })
+        // console.log(initialProbabilities)
+        // process.exit()
+    })
 }
 
-// loop through columns
-for (var columnIndex = columnKeys.length - 1, columnsLength = -1; columnIndex > columnsLength; columnIndex--) {
-    var columnKey = columnKeys[columnIndex]
-    // loop through row, starting from columnIndex
-    for (var rowIndex = columnIndex, rowsLength = -1; rowIndex > rowsLength; rowIndex--) {
-        var rowKey = rowKeys[rowIndex]
-        // select the current equation
-        var row = initialProbabilities[rowKey]
-        cellValue = row[columnIndex]
-
-        var firstValue = initialProbabilities[columnKey][columnIndex]
-        // our goal is
-        // cellValue + multiplier * firstValue = 0
-        var multiplier = -1 * cellValue / firstValue
-
-        if (rowIndex - columnIndex === 0) {
-            // it should already be 1, so no action needed
-        } else {
-            row = row.map((v, k) => {
-                var rowKey = rowKeys[columnIndex]
-                var firstValue = initialProbabilities[rowKey][k]
-                var r = v + multiplier * firstValue
-                return r
-            })
-        }
-        initialProbabilities[rowKey] = row
-    }
-    // console.log(initialProbabilities)
-    // process.exit()
-}
+elimination('forEach')
+elimination('forEachRight')
 console.log(initialProbabilities)
 
 
-var sum = _.chain(initialProbabilities).toPairs().map(x => x[1][x[1].length - 1]).sum().value()
+var sum = _.chain(initialProbabilities).toPairs().map(x => x[1].last()).sum().value()
 console.log(`sum: ${sum}`)
 
 
@@ -189,7 +164,7 @@ var first = rowKeys.map(rowKey => {
     var emProba = emissionProbabilities.filter(e => {
         return e[0] === rowKey && e[1] === observations[0]
     })[0]
-    return i[i.length - 1] * emProba[emProba.length - 1]
+    return i.last() * emProba.last()
 })
 probableEmissions.push(first)
 
@@ -208,7 +183,7 @@ for (var i = 1, l = observations.length; i < l; i++) {
     //     today_rainy = Math.max(yeste_sunny * t_sr * e_rg, yeste_rainy * t_rr * e_rg)
     //     proba.push([today_sunny, today_rainy])
     // }
-    var previousProbabilities = probableEmissions[probableEmissions.length - 1]
+    var previousProbabilities = probableEmissions.last()
 
     var today = rowKeys.map((rowKey1, rowIndex1) => {
         var nextProbabilities = rowKeys.map((rowKey, rowIndex) => {
@@ -219,9 +194,7 @@ for (var i = 1, l = observations.length; i < l; i++) {
             var emissionProbability = emissionProbabilities.filter(x => {
                 return x[0] === rowKey1 && x[1] === observations[i]
             })[0]
-            return yestSameKeyProb
-                * transitionProbability[transitionProbability.length - 1]
-                * emissionProbability[emissionProbability.length - 1]
+            return yestSameKeyProb * transitionProbability.last() * emissionProbability.last()
         })
         return Math.max(...nextProbabilities)
     })
