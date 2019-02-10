@@ -26,7 +26,18 @@ class XhrBook {
     }
 
     async readNextSentence() {
-        let nextStop = this.text.indexOf('.', this.hasReadUntil)
+        let nextStopDot = this.text.indexOf('.', this.hasReadUntil)
+        let nextStopChar = this.text.indexOf('�', this.hasReadUntil)
+        let nextStop
+        if (nextStopDot === -1 && nextStopChar === -1) {
+            return
+        } else if (nextStopDot === -1) {
+            nextStop = nextStopChar
+        } else if (nextStopChar === -1) {
+            nextStop = nextStopDot
+        } else {
+            nextStop = Math.min(nextStopDot, nextStopChar)
+        }
         let sentence = this.text.slice(this.hasReadUntil, nextStop)
         nextStop++
         this.hasReadUntil = nextStop

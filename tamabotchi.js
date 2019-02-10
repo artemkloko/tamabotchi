@@ -8,11 +8,12 @@
 
 class Dictionary extends Object {
     map(callback) {
+        let dictionary = new Dictionary()
         let keys = Object.keys(this)
         for (let key of keys) {
-            this[key] = callback(this[key], key, this)
+            dictionary[key] = callback(this[key], key, this)
         }
-        return this
+        return dictionary
     }
 
     filter(callback) {
@@ -35,7 +36,7 @@ class Dictionary extends Object {
         return array
     }
 
-    getLength(){
+    getLength() {
         return Object.keys(this).length
     }
 }
@@ -52,6 +53,10 @@ class MarkovChain {
     constructor(chainLength) {
         this.keywords = new Dictionary()
         this.chainLength = chainLength
+    }
+
+    decision(choises) {
+        return 0
     }
 
     add(words) {
@@ -74,11 +79,28 @@ class MarkovChain {
         }
     }
 
-    get(keyword) {
+    getInitialKeyword(rewards) {
+        let instance = this
+        let wraps = Object.keys(this.keywords).map(function (keyword) {
+            return [keyword, instance.getUtility(keyword, rewards)]
+        })
+        wraps = wraps.filter(wrap => {
+            return wrap[1] > 0
+        }).sort(function (a, b) {
+            return b[1] - a[1]
+        })
+        if (wraps.length === 0) {
+            return
+        }
+        let r = this.decision(wraps)
+        return wraps[r][0]
+    }
+
+    getSentence(keyword, rewards) {
         let words = keyword.split(' ')
         while (true) {
             let keyword = words.slice(-1 * this.chainLength).join(' ')
-            let nextWord = this.next(keyword)
+            let nextWord = this.getNextWord(keyword, rewards)
             if (nextWord === '__END__' || typeof nextWord === 'undefined') {
                 break
             }
@@ -87,12 +109,55 @@ class MarkovChain {
         return words.join(' ')
     }
 
-    next(keyword) {
-        let nextWords = this.keywords[keyword]
-        let sorted = nextWords.toPairs().sort(function (a, b) {
+    getNextWord(keyword, rewards) {
+        var instance = this
+        var keywordSlice = keyword.split(' ').slice(0, this.chainLength - 1).join(' ')
+        var wraps = this.keywords[keyword].toPairs().map(function (wordCountPair) {
+            var nextWord = wordCountPair[0]
+
+            var nextKeyword = keywordSlice + ' ' + nextWord
+            var nextKeywordUtility = 0
+            if (keyword !== nextKeyword) {
+                nextKeywordUtility = instance.getUtility(nextKeyword, rewards)
+            }
+
+            return [nextWord, nextKeywordUtility]
+        }).sort(function (a, b) {
             return b[1] - a[1]
         })
-        return sorted[0][0]
+        let r = this.decision(wraps)
+        return wraps[r][0]
+    }
+
+    getUtility(keyword, rewards) {
+        var keywordSlice = keyword.split(' ').slice(0, this.chainLength - 1).join(' ')
+        var r = rewards.filter(reward => keyword.split(' ').indexOf(reward) > -1).length
+        try {
+            if (typeof this.keywords[keyword] === 'undefined') {
+                return r
+            }
+            let nextWords = this.keywords[keyword].toPairs()
+            let nextWordsSum = nextWords.reduce(function (prev, curr) {
+                return prev + curr[1]
+            }, 0)
+            var maxProbWord = nextWords.sort(function (a, b) {
+                return b[1] - a[1]
+            })[0]
+
+            var nextKeyword = keywordSlice + ' ' + maxProbWord[0]
+            var nextKeywordUtility = 0
+            if (keyword !== nextKeyword) {
+                nextKeywordUtility = this.getUtility(nextKeyword, rewards)
+            }
+
+            var g = 0.9
+            // var u = r + g * maxProbWord[1] / nextWordsSum * nextKeywordUtility
+            var u = r + g * nextKeywordUtility
+            return u
+        } catch (error) {
+            // console.log(error)
+            return r
+        }
     }
 
     stats() {
@@ -120,8 +185,8 @@ class Tamabotchi {
             forward: new MarkovChain(chainLength),
             backward: new MarkovChain(chainLength)
         }
-        this.markovChain.forward.next = this.next.bind(this.markovChain.forward)
-        this.markovChain.backward.next = this.next.bind(this.markovChain.backward)
+        this.markovChain.forward.decision = this.decision.bind(this.markovChain.forward)
+        this.markovChain.backward.decision = this.decision.bind(this.markovChain.backward)
     }
 
     async learn(sentence) {
@@ -134,64 +199,43 @@ class Tamabotchi {
         this.markovChain.backward.add(words.reverse())
     }
 
-    next(keyword) {
-        let nextWords = this.keywords[keyword]
-        let sorted = nextWords.toPairs().sort(function (a, b) {
-            return b[1] - a[1]
-        })
-        let r = Math.round(Math.random() * sorted.length / this.chainLength)
-        return sorted[r][0]
+    decision(choises) {
+        return Math.round(Math.random() * choises.length / this.chainLength)
     }
 
     async saySomething(sentence) {
         sentence = sentence.replace(/[;,.?!".\s]+/g, ' ').trim()
 
-        // sort words by their length
-        let words = sentence.split(/\s/).sort(function (a, b) {
-            return b.length - a.length
-        })
+        let rewards = sentence.split(/\s/)
+            .map(function (word, wordIndex) {
+                return [word, wordIndex]
+            })
+            .sort(function (a, b) {
+                // b - a because the biggest length to be first
+                return b[0].length - a[0].length
+            })
+            .filter(function (wrapWord, wrapIndex, wraps) {
+                var toKeep = Math.ceil(wraps.length * 1 / 3)
+                return wrapIndex < toKeep
+            })
+            .sort(function (a, b) {
+                return a[1] - b[1]
+            })
+            .map(function (wrapWord) {
+                return wrapWord[0]
+            })
+        console.log(`rewards: ${rewards}`)
 
-        // keep only 1/this.chainLength of longest words
-        let r = Math.round(Math.randomBetween(1, words.length / this.chainLength))
-        words = words.slice(0, r)
-
-        // make probabilities array by their length
-        let probabilities = []
-        words.forEach(word => {
-            for (let i = 0, l = word.length; i < l; i++) {
-                probabilities.push(word)
-            }
-        })
-
-        // select a random
-        r = Math.round(Math.randomBetween(probabilities.length - 1))
-        let wordSelected = probabilities[r]
-        console.log(`topic: ${wordSelected}`)
-
-        // collect the keys that contain the selected word
-        let keywords = this.markovChain.forward.keywords.filter(function (value, keyword) {
-            return keyword.split(' ').indexOf(wordSelected) > -1
-        }).map(function (nextWords) {
-            // here i can also sum the values of nextWords
-            return nextWords.getLength()
-        }).toPairs().sort(function (a, b) {
-            // transform to pairs sorted by value
-            return b[1] - a[1]
-        })
-
-        // if no keys
-        if (keywords.length === 0) {
-            wordSelected = typeof wordSelected === 'undefined' ? 'that' : `"${wordSelected}"`
-            return `What does ${wordSelected} even mean?`
-        }
-
-        // select one of the keys with biggest knowhow count
-        r = Math.round(Math.randomBetween(keywords.length / this.chainLength))
-        let keyword = keywords[r][0]
+        let keyword = this.markovChain.forward.getInitialKeyword(rewards)
         console.log(`keyword: ${keyword}`)
 
-        let f = this.markovChain.forward.get(keyword)
-        let b = this.markovChain.backward.get(keyword.split(' ').reverse().join(' '))
+        if (typeof keyword === 'undefined') {
+            var r = Math.floor(Math.random() * rewards.length)
+            return `What does "${rewards[r]}" even mean?`
+        }
+
+        let f = this.markovChain.forward.getSentence(keyword, rewards)
+        let b = this.markovChain.backward.getSentence(keyword.split(' ').reverse().join(' '), rewards.reverse())
         let reply = b.split(' ').reverse().join(' ') + f.substr(keyword.length)
         reply = reply.replace(/(\s+)([;,.?!])/g, ' $1 ')
         return reply

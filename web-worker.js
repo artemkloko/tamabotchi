@@ -15,9 +15,9 @@ const main = async function () {
                 if (event.data.value.split(/\s+/).indexOf('stats') > -1) {
                     response = JSON.stringify(tamabotchi.markovTable.stats())
                 } else {
+                    response = await tamabotchi.saySomething(event.data.value)
                     tamabotchi.learn(event.data.value)
                     storage.storeSentence(event.data.value)
-                    response = await tamabotchi.saySomething(event.data.value)
                 }
                 postMessage({
                     key: 'response',
@@ -25,7 +25,8 @@ const main = async function () {
                 })
             }
         } catch (error) {
-            postMessage({ key: 'error', value: error })
+            console.error(error)
+            postMessage({ key: 'error', value: error.toString() })
         }
     }
 
@@ -39,18 +40,19 @@ const main = async function () {
             tamabotchi.learn(sentence)
         }
 
-        let books = []
+        let books = ['books/history.txt']
         try {
-            config = JSON.parse(await XhrBook.create('config.json'))
-            books = config.books
+            book = await XhrBook.create('config.json')
+            config = JSON.parse(book.text)
+            books = books.concat(config.books)
         } catch (error) {
-
+            console.error(error);
         }
         for (bookSrc of books) {
             book = await XhrBook.create(bookSrc)
             while (true) {
                 let sentence = await book.readNextSentence()
-                if (sentence.trim() != '') {
+                if (typeof sentence === 'string') {
                     await tamabotchi.learn(sentence)
                 } else {
                     break
@@ -63,7 +65,7 @@ const main = async function () {
         postMessage({ key: 'ready', value: true })
     } catch (error) {
         console.error(error)
-        postMessage({ key: 'error', value: error })
+        postMessage({ key: 'error', value: error.toString() })
     }
 }
 

@@ -55,7 +55,7 @@ class IndexedDb {
             request.onsuccess = function (event) {
                 let bucket = event.target.result
                 if (typeof bucket === 'undefined') {
-                    reject('lalala')
+                    reject()
                 } else {
                     resolve(bucket.value)
                 }
