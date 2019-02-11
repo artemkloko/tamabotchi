@@ -230,6 +230,9 @@ class Tamabotchi {
         console.log(`keyword: ${keyword}`)
 
         if (typeof keyword === 'undefined') {
+            if (rewards.length === 1 && rewards[0] === '') {
+                return `What?`
+            }
             var r = Math.floor(Math.random() * rewards.length)
             return `What does "${rewards[r]}" even mean?`
         }
@@ -237,7 +240,7 @@ class Tamabotchi {
         let f = this.markovChain.forward.getSentence(keyword, rewards)
         let b = this.markovChain.backward.getSentence(keyword.split(' ').reverse().join(' '), rewards.reverse())
         let reply = b.split(' ').reverse().join(' ') + f.substr(keyword.length)
-        reply = reply.replace(/(\s+)([;,.?!])/g, ' $1 ')
+        reply = reply.replace(/\s+([;,.?!])/g, '$1 ').replace(/\s+/g, ' ')
         return reply
     }
 }
