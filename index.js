@@ -1,115 +1,63 @@
+const { appendFile, readFile } = require("fs");
+const { promisify } = require("util");
+const { RTMClient } = require("@slack/rtm-api");
 
-let { appendFile, readFile } = require('fs')
-let { promisify } = require('util')
+const config = require("./config");
+const Tamabotchi = require("./tamabotchi");
 
-let SlackBot = require('slackbots')
+const tamabotchi = new Tamabotchi(3);
+const knowledge = [];
 
-let config = require('./config')
-let Tamabotchi = require('./tamabotchi')
+const rtm = new RTMClient(config.token);
 
-let startBot = async function () {
-    return new Promise(function (resolve, reject) {
-        let bot = new SlackBot({
-            token: config.slack_token,
-            name: config.slack_name
-        })
-
-        bot.on('start', function () {
-            try {
-                let user = bot.users.filter(function (user) {
-                    return user.name === bot.name
-                })[0]
-                bot.id = user.id
-                console.log(`id: ${bot.id}`)
-                resolve(bot)
-            } catch (error) {
-                reject(error)
-            }
-        })
-    })
-}
-
-let main = async function () {
-    let bot
-    let tamabotchi
-
-    let respond = async function (response, message) {
-        if (message.inChannelBots) {
-            let channel = bot.channels.filter(function (item) {
-                return item.id === message.channel
-            })[0]
-            bot.postMessageToChannel(channel.name, response, { as_user: true })
-        } else if (message.inDirectMessage) {
-            let user = bot.users.filter(function (item) {
-                return item.id === message.user
-            })[0]
-            bot.postMessageToUser(user.name, response, { as_user: true })
-        }
+rtm.on("message", async event => {
+  try {
+    if (
+      event.type !== "message" ||
+      !event.text ||
+      !event.user ||
+      event.user === config.id
+    ) {
+      return;
     }
 
-    let receive = async function (message) {
-        let response
+    const direct_message = event.channel[0] === "D";
+    const mentioned = `<@${config.id}>`;
+    const mentioned_regexp = new RegExp(mentioned, "g");
 
-        try {
-            if (message.type !== 'message' ||
-                typeof message.text !== 'string' ||
-                message.user === bot.id) {
-                return
-            }
+    if (event.text.indexOf(mentioned) > -1 || direct_message) {
+      const sentence = event.text.replace(mentioned_regexp, "");
+      reply = tamabotchi.saySomething(sentence);
+      if (knowledge.indexOf(reply) > -1) {
+        reply = "> " + reply;
+      }
+      reply = reply.replace(/<@self>/g, `<@${event.user}>`);
 
-            message.inChannelBots = message.channel === 'CER5J71LY'
-            message.inDirectMessage = message.channel[0] === 'D'
-            message.hasMention = message.text.indexOf(`<@${bot.id}>`) > -1
-
-            if (message.text.split(/\s+/g).indexOf('stats') > -1 &&
-                (message.inDirectMessage || message.hasMention)) {
-                var stats = tamabotchi.markovTable.stats()
-                stats.memoryUsed = Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + '/' +
-                    Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + 'MB'
-                return respond(JSON.stringify(stats), message)
-            }
-
-            let messageClean = message.text.replace(new RegExp(`<@${bot.id}>`, 'g'), `<@self>`)
-            tamabotchi.learn(messageClean)
-            await promisify(appendFile)('books/history.txt', messageClean + '�')
-
-            if (message.inChannelBots && message.hasMention) {
-                // pass
-                // } else if (message.inChannelBots && (Math.random() > 0.8)) {
-                // pass
-            } else if (message.inDirectMessage) {
-                // pass
-            } else {
-                return
-            }
-
-            messageClean = message.text.replace(new RegExp(`<@${bot.id}>`, 'g'), '')
-            response = await tamabotchi.saySomething(messageClean)
-            response = response.replace(/\<\@self\>/g, `<@${message.user}>`)
-        } catch (error) {
-            console.error(error)
-            response = 'I am broken...'
-        } finally {
-            respond(response, message)
-        }
+      await rtm.sendMessage(reply, event.channel);
     }
 
-    try {
-        tamabotchi = new Tamabotchi(3)
+    const sentence = event.text.replace(mentioned_regexp, "<@self>");
+    knowledge.push(sentence);
+    tamabotchi.learn(sentence);
+    await promisify(appendFile)("books/history.txt", sentence + "�");
+  } catch (error) {
+    console.error(error);
+  }
+});
 
-        let books = ['books/history.txt'].concat(config.books)
-        for (let bookSrc of books) {
-            let content = await promisify(readFile)(bookSrc, 'utf-8')
-            for (let sentence of content.split(/[.�]/)) {
-                await tamabotchi.learn(sentence)
-            }
-            console.log(`read ${bookSrc}`)
-        }
-        bot = await startBot()
-        bot.on('message', receive)
-    } catch (error) {
-        console.error(error)
+const main = async () => {
+  const books = ["books/history.txt"].concat(config.books);
+  for (let bookSrc of books) {
+    const content = await promisify(readFile)(bookSrc, "utf-8");
+    for (let sentence of content.split(/[.�]/)) {
+      knowledge.push(sentence);
+      tamabotchi.learn(sentence);
     }
-}
+    console.log(`read book ${bookSrc}`);
+  }
 
-main()
+  await rtm.start();
+  console.log("started");
+};
+
+main();

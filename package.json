@@ -9,7 +9,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "lodash": "^4.17.11",
-    "slackbots": "^1.2.0"
+    "@slack/rtm-api": "^5.0.2"
   }
 }

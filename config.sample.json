@@ -1,9 +1,9 @@
 {
-    "slack_token": "",
-    "slack_name": "tamabotchi",
-    "books": [
-        "books/Economic-Philosophic-Manuscripts-1844.txt",
-        "books/guy-debord-the-society-of-the-spectacle.txt",
-        "books/naked-lunch.txt"
-    ]
+  "token": "__INSERT_BOT_OAUTH_TOKEN__",
+  "name": "__INSERT_BOT_DISPLAY_NAME__",
+  "id": "__INSERT_BOT_ID__",
+  "books": [
+    "books/Economic-Philosophic-Manuscripts-1844.txt",
+    "books/guy-debord-the-society-of-the-spectacle.txt"
+  ]
 }
